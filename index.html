@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>질문 대축제 진행 화면</title>
+<style>
+  :root{
+    --bg:#000;
+    --bar:#0d1220;
+    --fg:#f5f7ff;
+    --muted:#8994b3;
+    --accent:#4f8cff;
+    --warn:#ffb020;
+    --danger:#ff4d4f;
+    --card:#161f36;
+    --border:#28324e;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    height:100%;
+    margin:0;
+    background:var(--bg);
+    color:var(--fg);
+    font-family:"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+    overflow:hidden;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+  body{
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    height:100dvh;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    background:var(--bar);
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    gap:clamp(8px,1.4vw,20px);
+    padding:8px clamp(10px,1.6vw,22px);
+    flex-wrap:wrap;
+    flex-shrink:0;
+  }
+  .group{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .nav-btn{
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--fg);
+    width:clamp(32px,3.4vw,44px);
+    height:clamp(32px,3.4vw,44px);
+    border-radius:10px;
+    cursor:pointer;
+    font-size:clamp(14px,1.6vw,20px);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .nav-btn:hover{border-color:var(--accent);}
+  .nav-btn:disabled{opacity:.35;cursor:default;}
+  .slide-count{
+    color:var(--muted);
+    font-variant-numeric:tabular-nums;
+    font-size:clamp(12px,1.3vw,16px);
+    min-width:56px;
+    text-align:center;
+  }
+
+  .spacer{flex:1 1 auto;}
+
+  .clock{
+    font-variant-numeric:tabular-nums;
+    font-weight:800;
+    font-size:clamp(18px,2.6vw,34px);
+    letter-spacing:.02em;
+    white-space:nowrap;
+  }
+
+  .timerbox{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:5px 8px;
+  }
+  .timer{
+    font-variant-numeric:tabular-nums;
+    font-weight:800;
+    font-size:clamp(18px,2.6vw,34px);
+    min-width:2.6em;
+    text-align:center;
+    transition:color .2s;
+  }
+  .timer.warn{color:var(--warn);}
+  .timer.danger{color:var(--danger);animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+  .chip{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--muted);
+    font-size:clamp(10px,1vw,13px);
+    padding:5px 8px;
+    border-radius:8px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .chip:hover{color:var(--fg);border-color:var(--accent);}
+
+  .iconbtn{
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--fg);
+    width:clamp(30px,3.2vw,40px);
+    height:clamp(30px,3.2vw,40px);
+    border-radius:10px;
+    cursor:pointer;
+    font-size:clamp(13px,1.5vw,18px);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .iconbtn.active{border-color:var(--accent);color:var(--accent);}
+  .iconbtn.start{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+  /* ---------- slide area ---------- */
+  .stage{
+    flex:1;
+    min-height:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    background:#000;
+  }
+  .stage img{
+    max-width:100%;
+    max-height:100%;
+    object-fit:contain;
+    display:block;
+  }
+  .clickzone{
+    position:absolute;
+    top:0;bottom:0;
+    width:35%;
+    cursor:pointer;
+  }
+  .clickzone.left{left:0;}
+  .clickzone.right{right:0;}
+
+  .finished-banner{
+    position:fixed;
+    inset:0;
+    background:rgba(255,77,79,.94);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:18px;
+    z-index:50;
+  }
+  .finished-banner.show{display:flex;}
+  .finished-banner .msg{
+    font-size:clamp(28px,5vw,64px);
+    font-weight:800;
+    color:#fff;
+  }
+  .finished-banner button{
+    padding:10px 28px;
+    font-size:18px;
+    border-radius:10px;
+    border:none;
+    background:#fff;
+    color:var(--danger);
+    font-weight:700;
+    cursor:pointer;
+  }
+
+  ::selection{background:var(--accent);color:#fff;}
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="group">
+      <button class="nav-btn" id="prevBtn" title="이전 슬라이드">◀</button>
+      <div class="slide-count" id="slideCount">1 / 1</div>
+      <button class="nav-btn" id="nextBtn" title="다음 슬라이드">▶</button>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="clock" id="clock">00:00:00</div>
+
+    <div class="timerbox">
+      <button class="chip" data-preset="300">5분</button>
+      <button class="chip" data-preset="600">10분</button>
+      <button class="chip" data-preset="900">15분</button>
+      <button class="chip" data-preset="1200">20분</button>
+      <button class="chip" data-adjust="-60">-1분</button>
+      <button class="chip" data-adjust="-10">-10초</button>
+      <button class="chip" data-adjust="10">+10초</button>
+      <button class="chip" data-adjust="60">+1분</button>
+      <div class="timer" id="timerDisplay">05:00</div>
+      <button class="iconbtn start" id="startBtn" title="타이머 시작/일시정지">▶</button>
+      <button class="iconbtn" id="resetBtn" title="타이머 초기화">↺</button>
+    </div>
+
+    <div class="group">
+      <button class="iconbtn" id="muteBtn" title="알림음 켜기/끄기">🔔</button>
+      <button class="iconbtn" id="fullscreenBtn" title="전체화면">⛶</button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <img id="slideImg" src="" alt="slide" />
+    <div class="clickzone left" id="zoneLeft"></div>
+    <div class="clickzone right" id="zoneRight"></div>
+  </div>
+
+  <div class="finished-banner" id="finishedBanner">
+    <div class="msg">⏰ 시간 종료!</div>
+    <button id="ackBtn">확인</button>
+  </div>
+
+<script>
+(() => {
+  // ---------- 슬라이드 ----------
+  const TOTAL_SLIDES = 21;
+  const slideImg = document.getElementById('slideImg');
+  const slideCount = document.getElementById('slideCount');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  let current = parseInt(localStorage.getItem('qf_slide') || '1', 10);
+  if (current < 1 || current > TOTAL_SLIDES) current = 1;
+
+  function slideSrc(n){
+    return `slides/slide-${String(n).padStart(2,'0')}.jpg`;
+  }
+
+  function preload(n){
+    if (n < 1 || n > TOTAL_SLIDES) return;
+    const im = new Image();
+    im.src = slideSrc(n);
+  }
+
+  function renderSlide(){
+    slideImg.src = slideSrc(current);
+    slideCount.textContent = `${current} / ${TOTAL_SLIDES}`;
+    prevBtn.disabled = current <= 1;
+    nextBtn.disabled = current >= TOTAL_SLIDES;
+    localStorage.setItem('qf_slide', String(current));
+    preload(current + 1);
+    preload(current - 1);
+  }
+
+  function goTo(n){
+    current = Math.min(TOTAL_SLIDES, Math.max(1, n));
+    renderSlide();
+  }
+
+  prevBtn.addEventListener('click', () => goTo(current - 1));
+  nextBtn.addEventListener('click', () => goTo(current + 1));
+  document.getElementById('zoneLeft').addEventListener('click', () => goTo(current - 1));
+  document.getElementById('zoneRight').addEventListener('click', () => goTo(current + 1));
+
+  renderSlide();
+
+  // ---------- 현재 시각 ----------
+  const clockEl = document.getElementById('clock');
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function tickClock(){
+    const now = new Date();
+    clockEl.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  }
+  tickClock();
+  setInterval(tickClock, 250);
+
+  // ---------- 전체화면 ----------
+  document.getElementById('fullscreenBtn').addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(()=>{});
+    } else {
+      document.exitFullscreen().catch(()=>{});
+    }
+  });
+
+  // ---------- 알림음 on/off ----------
+  const muteBtn = document.getElementById('muteBtn');
+  let muted = localStorage.getItem('qf_muted') === '1';
+  function renderMute(){
+    muteBtn.textContent = muted ? '🔕' : '🔔';
+    muteBtn.classList.toggle('active', !muted);
+  }
+  renderMute();
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    localStorage.setItem('qf_muted', muted ? '1' : '0');
+    renderMute();
+  });
+
+  function beep(times=3){
+    if (muted) return;
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    let t = ctx.currentTime;
+    for (let i=0;i<times;i++){
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.3, t+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t+0.35);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t+0.4);
+      t += 0.5;
+    }
+  }
+
+  // ---------- 타이머 ----------
+  const timerDisplay = document.getElementById('timerDisplay');
+  const startBtn = document.getElementById('startBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const finishedBanner = document.getElementById('finishedBanner');
+  const ackBtn = document.getElementById('ackBtn');
+
+  let durationSec = 5 * 60;
+  let remainingSec = durationSec;
+  let running = false;
+  let endTimestamp = null;
+  let rafId = null;
+
+  function renderTimer(){
+    const m = Math.floor(remainingSec/60);
+    const s = remainingSec%60;
+    timerDisplay.textContent = `${pad(m)}:${pad(s)}`;
+    timerDisplay.classList.toggle('warn', remainingSec <= 60 && remainingSec > 10);
+    timerDisplay.classList.toggle('danger', remainingSec <= 10 && remainingSec > 0);
+  }
+
+  function setDuration(sec){
+    stopLoop();
+    running = false;
+    durationSec = sec;
+    remainingSec = sec;
+    startBtn.textContent = '▶';
+    finishedBanner.classList.remove('show');
+    renderTimer();
+  }
+
+  function adjust(deltaSec){
+    if (running) return;
+    remainingSec = Math.max(0, remainingSec + deltaSec);
+    durationSec = remainingSec;
+    renderTimer();
+  }
+
+  document.querySelectorAll('.chip[data-preset]').forEach(btn => {
+    btn.addEventListener('click', () => setDuration(parseInt(btn.dataset.preset,10)));
+  });
+  document.querySelectorAll('.chip[data-adjust]').forEach(btn => {
+    btn.addEventListener('click', () => adjust(parseInt(btn.dataset.adjust,10)));
+  });
+
+  function loop(){
+    if (!running) return;
+    const now = Date.now();
+    remainingSec = Math.max(0, Math.round((endTimestamp - now)/1000));
+    renderTimer();
+    if (remainingSec <= 0){
+      finish();
+      return;
+    }
+    rafId = requestAnimationFrame(loop);
+  }
+  function stopLoop(){
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+  function start(){
+    if (remainingSec <= 0) return;
+    running = true;
+    endTimestamp = Date.now() + remainingSec*1000;
+    startBtn.textContent = '❚❚';
+    loop();
+  }
+  function pause(){
+    running = false;
+    stopLoop();
+    startBtn.textContent = '▶';
+  }
+  function finish(){
+    running = false;
+    stopLoop();
+    remainingSec = 0;
+    renderTimer();
+    startBtn.textContent = '▶';
+    finishedBanner.classList.add('show');
+    beep(4);
+  }
+
+  startBtn.addEventListener('click', () => running ? pause() : start());
+  resetBtn.addEventListener('click', () => setDuration(durationSec));
+  ackBtn.addEventListener('click', () => finishedBanner.classList.remove('show'));
+
+  // ---------- 키보드 단축키 (슬라이드 이동) ----------
+  document.addEventListener('keydown', (e) => {
+    if (['ArrowRight','PageDown',' '].includes(e.key)){
+      e.preventDefault();
+      goTo(current + 1);
+    } else if (['ArrowLeft','PageUp'].includes(e.key)){
+      e.preventDefault();
+      goTo(current - 1);
+    }
+  });
+
+  renderTimer();
+})();
+</script>
+</body>
+</html>
